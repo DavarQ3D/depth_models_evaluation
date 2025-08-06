@@ -346,3 +346,11 @@ def handlePredictionSteps(raw_image, gt, makeSquareInput, borderType, useCoreML,
         cropped = cv2.resize(cropped, (gt.shape[1], gt.shape[0]), interpolation=cv2.INTER_CUBIC)
 
     return pred, gt, cropped
+
+
+#=======================================================================
+
+def resizeImage(image, sc):
+    if sc <= 0:
+        raise ValueError("Scale factor must be greater than 0")
+    return cv2.resize(image, None, fx=sc, fy=sc, interpolation=cv2.INTER_CUBIC)
