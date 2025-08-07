@@ -1,6 +1,4 @@
 from enum import Enum
-import torch
-import cv2
 from custom_assets.utils import *
 
 class Model(Enum):

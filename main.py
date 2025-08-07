@@ -3,7 +3,6 @@ from custom_assets.visualizer import Visualizer
 from custom_assets.utils import *
 from custom_assets.models import Model, ModelManager
 import os
-import cv2
 
 #=============================================================================================================
 
