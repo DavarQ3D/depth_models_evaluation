@@ -1,5 +1,7 @@
 from enum import Enum
 import torch
+import cv2
+from custom_assets.utils import center_crop_or_pad, ensure_multiple_of
 
 class Model(Enum):
     Torch_depthAnythingV2_Rel = 1
@@ -11,6 +13,17 @@ class Model(Enum):
 
 class ModelManager:
     def __init__(self, mdType, mPath, encoder, max_depth=None):
+
+        #--- stuff related to depthAnythingV2
+        #------------------------------------------
+        self.makeSquareInput = None
+        self.pad_top = None
+        self.pad_left = None
+        self.crop_top = None
+        self.crop_left = None
+        self.dim = None
+        self.resizedShape = None
+        #------------------------------------------
 
         self.mdType = mdType
         self.device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
@@ -25,7 +38,7 @@ class ModelManager:
 
     #=======================================================================
 
-    def loadDepthAnyTorchModel(modelPath, encoder, max_depth=None):
+    def loadDepthAnyTorchModel(self, modelPath, encoder, max_depth=None):
         
         model_configs = {
             'vits': {'encoder': 'vits', 'features': 64, 'out_channels': [48, 96, 192, 384]},
@@ -43,12 +56,83 @@ class ModelManager:
     
         model.load_state_dict(torch.load(modelPath, map_location='cpu'))
         
-        return model    
-    
+        return model.eval()    
 
     #=======================================================================
 
-    # def infer(self, image):
+    def adaptShapeForInference(self, image, makeSquare, borderType, dim=518):
 
-    #     with torch.no_grad():
-    #         image = image.to(self.device).unsqueeze(0)
+        self.dim = dim
+
+        if makeSquare:
+            sc = dim / max(image.shape[:2])
+            resized = cv2.resize(image, (int(image.shape[1] * sc), int(image.shape[0] * sc)), interpolation=cv2.INTER_CUBIC)
+            self.resizedShape = resized.shape[:2]
+            r = dim
+            c = dim
+            padded, pad_top, pad_left, _, _ = center_crop_or_pad(resized, r, c, borderType)
+            self.makeSquareInput = True
+            self.pad_top = pad_top
+            self.pad_left = pad_left
+            return padded
+
+        else:    
+            sc = dim / min(image.shape[:2])
+            resized = cv2.resize(image, (int(image.shape[1] * sc), int(image.shape[0] * sc)), interpolation=cv2.INTER_CUBIC)
+            self.resizedShape = resized.shape[:2]
+            r = ensure_multiple_of(resized.shape[0], multiple_of=14)
+            c = ensure_multiple_of(resized.shape[1], multiple_of=14)
+            cropped, _, _, crop_top, crop_left = center_crop_or_pad(resized, r, c)
+            self.makeSquareInput = False
+            self.crop_top = crop_top
+            self.crop_left = crop_left
+            return cropped
+
+    #=======================================================================
+
+    def infer(self, image):
+
+        with torch.no_grad():
+
+            if self.mdType == Model.Torch_depthAnythingV2_Rel or self.mdType == Model.Torch_depthAnythingV2_Metric:
+                return self.model.infer_image(image, self.dim, doResize=False)
+
+            else:
+                raise ValueError("Unsupported model type for inference")
+            
+    #=======================================================================  
+
+    def alignShapes(self, image, pred, gt):
+
+        if self.mdType == Model.Torch_depthAnythingV2_Rel or self.mdType == Model.Torch_depthAnythingV2_Metric:
+
+            resizedShape = self.resizedShape
+
+            if self.makeSquareInput:
+                pad_top = self.pad_top
+                pad_left = self.pad_left
+
+                pred  = pred [pad_top : pad_top + resizedShape[0], pad_left: pad_left + resizedShape[1]]
+                image = image[pad_top : pad_top + resizedShape[0], pad_left: pad_left + resizedShape[1], :]
+                
+                pred  = cv2.resize(pred,  (gt.shape[1], gt.shape[0]), interpolation=cv2.INTER_CUBIC)
+                image = cv2.resize(image, (gt.shape[1], gt.shape[0]), interpolation=cv2.INTER_CUBIC)
+
+            else:
+                crop_top = self.crop_top
+                crop_left = self.crop_left
+
+                vertMarg  = (crop_top * 2) / (resizedShape[0] / gt.shape[0])
+                horizMarg = (crop_left * 2) / (resizedShape[1] / gt.shape[1])
+                vertMarg = round(vertMarg / 2)                                # round to the nearest even number
+                horizMarg = round(horizMarg / 2)
+                gt = gt[vertMarg or None : (-vertMarg) or None, horizMarg or None : (-horizMarg) or None]
+                
+                pred  = cv2.resize(pred,  (gt.shape[1], gt.shape[0]), interpolation=cv2.INTER_CUBIC)
+                image = cv2.resize(image, (gt.shape[1], gt.shape[0]), interpolation=cv2.INTER_CUBIC)
+
+        else:
+            raise ValueError("Unsupported model type for shape alignment")        
+
+        return image, pred, gt
+          

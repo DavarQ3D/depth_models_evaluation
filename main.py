@@ -2,16 +2,25 @@ from custom_assets.datasets import Dataset, DataManager
 from custom_assets.visualizer import Visualizer
 from custom_assets.utils import resizeImage
 from custom_assets.models import Model, ModelManager
-
 import os
+import cv2
 
 #=============================================================================================================
 
 if __name__ == '__main__':
 
-    dtset = Dataset.IPHONE
     outdir = "./data/outputs"
     os.makedirs(outdir, exist_ok=True)
+
+    #--------------------- settings
+    
+    dtset = Dataset.IPHONE
+    
+    mdType = Model.Torch_depthAnythingV2_Rel
+    encoder = "vits"
+
+    makeSquareInput = True and (mdType == Model.Torch_depthAnythingV2_Rel or mdType == Model.Torch_depthAnythingV2_Metric)
+    borderType = cv2.BORDER_CONSTANT
 
     #--------------------- dataset 
 
@@ -34,8 +43,6 @@ if __name__ == '__main__':
 
     #--------------------- model manager
     
-    mdType = Model.Torch_depthAnythingV2_Rel
-    encoder = "vits"
     max_depth = None
 
     if mdType == Model.Torch_depthAnythingV2_Rel:
@@ -62,7 +69,16 @@ if __name__ == '__main__':
 
         bgr, gt = dtManager.getSamplePair(idx)
 
+        if mdType == Model.Torch_depthAnythingV2_Rel: 
+            bgr = mdManager.adaptShapeForInference(bgr, makeSquareInput, borderType, dim=518)
+            relDisparity = mdManager.infer(bgr)
+            bgr, relDisparity, gt = mdManager.alignShapes(bgr, relDisparity, gt)
 
+        elif mdType == Model.Torch_depthAnythingV2_Metric:
+            bgr = mdManager.adaptShapeForInference(bgr, makeSquareInput, borderType)
+            metricDepth = mdManager.infer(bgr)
+            bgr, metricDepth, gt = mdManager.alignShapes(bgr, metricDepth, gt)
 
-
+        else:
+            raise ValueError("Unsupported model type")
 
