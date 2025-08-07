@@ -1,7 +1,7 @@
 from enum import Enum
 import torch
 import cv2
-from custom_assets.utils import center_crop_or_pad, ensure_multiple_of
+from custom_assets.utils import *
 
 class Model(Enum):
     Torch_depthAnythingV2_Rel = 1
@@ -136,3 +136,17 @@ class ModelManager:
 
         return image, pred, gt
           
+    #=======================================================================        
+
+    def alignInDisparitySpace(self, pred_disparity, gt, mask, k_hi):
+
+        gt_disparity = 1 / (gt + 1e-8)                      # convert depth to disparity (inverse depth)
+        predDisparityMask, pred_disparity = getValidMaskAndClipExtremes(pred_disparity, minVal=0.01, maxVal=100) 
+        mask = mask & predDisparityMask
+
+        scale, shift, mask = weightedLeastSquared(pred_disparity, gt_disparity, guessInitPrms=True, k_lo=0.2, k_hi=k_hi, num_iters=10, fit_shift=True, verbose=False, mask=mask)
+        # scale, shift, mask = estimateParametersRANSAC(pred_disparity, gt_disparity) 
+
+        pred_disparity = scale * pred_disparity + shift
+        pred_depth = 1 / (pred_disparity + 1e-8)            # convert back to depth
+        return pred_depth

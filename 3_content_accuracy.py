@@ -119,7 +119,7 @@ if __name__ == '__main__':
             gt = cv2.imread(gtPath, cv2.IMREAD_UNCHANGED)
             gt = gt.astype(np.float64) / 1000.0           # scale to meters
 
-            margin = 8   # remove white margin
+            margin = 8                                    # remove white margin
             raw_image = raw_image[margin:-margin, margin:-margin, :]
             gt = gt[margin:-margin, margin:-margin]
 

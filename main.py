@@ -1,6 +1,6 @@
 from custom_assets.datasets import Dataset, DataManager
 from custom_assets.visualizer import Visualizer
-from custom_assets.utils import resizeImage
+from custom_assets.utils import *
 from custom_assets.models import Model, ModelManager
 import os
 import cv2
@@ -14,10 +14,12 @@ if __name__ == '__main__':
 
     #--------------------- settings
     
-    dtset = Dataset.IPHONE
+    dtset = Dataset.KITTI
     
     mdType = Model.Torch_depthAnythingV2_Rel
     encoder = "vits"
+
+    k_hi = 2.5 if dtset == Dataset.IPHONE else 3.0
 
     makeSquareInput = True and (mdType == Model.Torch_depthAnythingV2_Rel or mdType == Model.Torch_depthAnythingV2_Metric)
     borderType = cv2.BORDER_CONSTANT
@@ -69,10 +71,14 @@ if __name__ == '__main__':
 
         bgr, gt = dtManager.getSamplePair(idx)
 
+        maxVal = 50.0 if dtset == Dataset.KITTI else 15.0
+        staticMask, gt = getValidMaskAndClipExtremes(gt, minVal=0.01, maxVal=maxVal) 
+        
         if mdType == Model.Torch_depthAnythingV2_Rel: 
             bgr = mdManager.adaptShapeForInference(bgr, makeSquareInput, borderType, dim=518)
             relDisparity = mdManager.infer(bgr)
             bgr, relDisparity, gt = mdManager.alignShapes(bgr, relDisparity, gt)
+            metricDepth = mdManager.alignInDisparitySpace(relDisparity, gt, staticMask, k_hi)
 
         elif mdType == Model.Torch_depthAnythingV2_Metric:
             bgr = mdManager.adaptShapeForInference(bgr, makeSquareInput, borderType)
