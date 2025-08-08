@@ -136,9 +136,9 @@ class ModelManager:
           
     #=======================================================================        
 
-    def alignInDisparitySpace(self, pred_disparity, gt, mask, k_hi):
+    def alignInDisparitySpace(self, pred_disparity, gt_depth, mask, k_hi):
 
-        gt_disparity = 1 / (gt + 1e-8)                      # convert depth to disparity (inverse depth)
+        gt_disparity = 1 / (gt_depth + 1e-8)                      # convert depth to disparity (inverse depth)
         predDisparityMask, pred_disparity = getValidMaskAndClipExtremes(pred_disparity, minVal=0.01, maxVal=100) 
         mask = mask & predDisparityMask
 
@@ -148,3 +148,23 @@ class ModelManager:
         pred_disparity = scale * pred_disparity + shift
         pred_depth = 1 / (pred_disparity + 1e-8)            # convert back to depth
         return pred_depth
+    
+    #=======================================================================  
+
+    def alignInDepthSpace(self, pred, gt, mask, k_hi, fitScale, fitShift, maxVal):
+    
+        predMask, pred = getValidMaskAndClipExtremes(pred, minVal=0.01, maxVal=maxVal)
+        mask = mask & predMask
+        
+        if fitScale:
+            scale, shift, mask = weightedLeastSquared(pred, gt, guessInitPrms=True, k_lo=0.2, k_hi=k_hi, num_iters=10, fit_shift=fitShift, verbose=False, mask=mask)
+
+        else:
+            x = pred[mask].ravel()  
+            y = gt[mask].ravel()   
+            scale, shift = estimateInitialParams(x, y, fitShift=False)     
+
+        print("Scale:", fp(scale), ", Shift:", fp(shift), '\n')
+
+        pred = scale * pred + shift     
+        return pred

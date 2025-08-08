@@ -354,3 +354,13 @@ def resizeImage(image, sc):
     if sc <= 0:
         raise ValueError("Scale factor must be greater than 0")
     return cv2.resize(image, None, fx=sc, fy=sc, interpolation=cv2.INTER_CUBIC)
+
+#=============================================================================================================
+
+def makeMultiChannelImage(depth):
+    if len(depth.shape) == 3 and depth.shape[2] > 1:
+        return depth
+    depth = normalize(depth)
+    depth = denormalize(depth)
+    depth = cv2.cvtColor(depth, cv2.COLOR_GRAY2BGR)
+    return depth

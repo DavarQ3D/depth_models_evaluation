@@ -144,7 +144,7 @@ if __name__ == '__main__':
         #========================================================================
 
         if metricDepth:
-            
+
             pred = inferred
             predMask, pred = getValidMaskAndClipExtremes(pred, minVal=0.01, maxVal=maxVal)
             mask = gtMask & predMask
@@ -199,7 +199,7 @@ if __name__ == '__main__':
         print("Scale:", fp(scale), ", Shift:", fp(shift), '\n')
 
         vertConcat = True if dtSet == Dataset.KITTI else False
-        visualRes, rmse = analyzeAndPrepVis(cropped, mask, gt, pred, vertConcat=vertConcat)
+        visualRes, rmse = analyzeAndPrepVis(cropped, gtMask, gt, pred, vertConcat=vertConcat)
 
         if rmse < minRMSE:
             minRMSE = rmse

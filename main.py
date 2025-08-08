@@ -2,6 +2,7 @@ from custom_assets.datasets import Dataset, DataManager
 from custom_assets.visualizer import Visualizer
 from custom_assets.utils import *
 from custom_assets.models import Model, ModelManager
+from custom_assets.analyzer import Analyzer
 import os
 
 #=============================================================================================================
@@ -18,10 +19,15 @@ if __name__ == '__main__':
     mdType = Model.Torch_depthAnythingV2_Rel
     encoder = "vits"
 
+    alignDepth = False or mdType != Model.Torch_depthAnythingV2_Rel
+    fitScale = False
+    fitShift = False
     k_hi = 2.5 if dtset == Dataset.IPHONE else 3.0
 
     makeSquareInput = True and (mdType == Model.Torch_depthAnythingV2_Rel or mdType == Model.Torch_depthAnythingV2_Metric)
     borderType = cv2.BORDER_CONSTANT
+
+    showVisuals = True
 
     #--------------------- dataset 
 
@@ -59,6 +65,10 @@ if __name__ == '__main__':
     
     mdManager = ModelManager(mdType, mPath, encoder, max_depth)
 
+    #--------------------- analyzer
+
+    analyzer = Analyzer()
+
     #------------------ inference loop
     #------------------------------------------------------------------
 
@@ -70,8 +80,14 @@ if __name__ == '__main__':
 
         bgr, gt = dtManager.getSamplePair(idx)
 
+        #------------- static mask
+        #-------------------------------------------------
+        
         maxVal = 50.0 if dtset == Dataset.KITTI else 15.0
         staticMask, gt = getValidMaskAndClipExtremes(gt, minVal=0.01, maxVal=maxVal) 
+        
+        #------------- metric depth inference
+        #-------------------------------------------------
         
         if mdType == Model.Torch_depthAnythingV2_Rel: 
             bgr = mdManager.adaptShapeForInference(bgr, makeSquareInput, borderType, dim=518)
@@ -86,4 +102,21 @@ if __name__ == '__main__':
 
         else:
             raise ValueError("Unsupported model type")
+
+        #------------- metric depth alignment
+        #-------------------------------------------------
+        
+        if alignDepth:
+            metricDepth = mdManager.alignInDepthSpace(metricDepth, gt, staticMask, k_hi, fitScale, fitShift, maxVal)
+        
+        #------------- error analysis
+        #-------------------------------------------------
+
+        errImage = analyzer.runAnalysis(metricDepth, gt, staticMask, idx)
+        analyzer.sampleProcessed()
+
+        if showVisuals:
+            sc = 2.5 if dtset == Dataset.IPHONE else 0.7 
+            visualizer.showResults(bgr, metricDepth, gt, errImage, sc, vertConcat=(dtset == Dataset.KITTI))
+        
 

@@ -1,9 +1,8 @@
-from enum import Enum
 import os
 import cv2
 import numpy as np
-from custom_assets.utils import loadMatrixFromFile
-
+from custom_assets.utils import *
+from enum import Enum
 
 class Dataset(Enum):
     IPHONE = 1
