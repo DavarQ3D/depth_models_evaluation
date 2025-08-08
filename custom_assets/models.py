@@ -1,6 +1,8 @@
 from enum import Enum
 from custom_assets.utils import *
 import torch
+from methods.unidepthV2.unidepth.models import UniDepthV2
+from methods.unidepthV2.unidepth.utils.camera import Pinhole
 
 class Model(Enum):
     Torch_depthAnythingV2_Rel = 1
@@ -11,7 +13,7 @@ class Model(Enum):
 #==============================================================================================
 
 class ModelManager:
-    def __init__(self, mdType, mPath, encoder, max_depth=None):
+    def __init__(self, mdType, mPath, encoder=None, max_depth=None):
 
         #--- stuff related to depthAnythingV2
         #------------------------------------------
@@ -29,6 +31,11 @@ class ModelManager:
 
         if mdType == Model.Torch_depthAnythingV2_Rel or mdType == Model.Torch_depthAnythingV2_Metric:
             self.model = self.loadDepthAnyTorchModel(mPath, encoder, max_depth)
+        
+        elif mdType == Model.Torch_UNIDEPTH_V2:
+            self.model = UniDepthV2.from_pretrained(mPath)
+            self.model.interpolation_mode = "bilinear"      # set interpolation mode (only V2)
+            # self.model.resolution_level = 9               # set resolution level (only V2)
 
         else:
             raise ValueError("Unsupported model type")
@@ -89,12 +96,34 @@ class ModelManager:
 
     #=======================================================================
 
-    def infer(self, image):
+    def infer(self, bgr, intrinsics=None):
 
         with torch.no_grad():
 
             if self.mdType == Model.Torch_depthAnythingV2_Rel or self.mdType == Model.Torch_depthAnythingV2_Metric:
-                return self.model.infer_image(image, self.dim, doResize=False)
+                return self.model.infer_image(bgr, self.dim, doResize=False), None
+
+            elif self.mdType == Model.Torch_UNIDEPTH_V2:
+                
+                rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)       # convert bgr to rgb
+                rgbTensor = torch.from_numpy(np.array(rgb))
+                rgbTensor = rgbTensor.permute(2, 0, 1)           # c, h, w
+
+                intrinsics = torch.from_numpy(intrinsics)        # 3 x 3
+                camera = Pinhole(K=intrinsics) 
+                
+                predictions = self.model.infer(rgbTensor, camera=camera)
+
+                depth = predictions["depth"]                                 # metric depth
+                depth = depth[0,0].cpu().numpy()
+                
+                xyz = predictions["points"]                                  # point cloud in camera coordinates
+                xyz = xyz[0].cpu().permute(1, 2, 0).numpy()
+
+                intrinsics = predictions["intrinsics"]                       # intrinsics prediction
+                intrinsics = intrinsics[0].cpu().numpy()
+
+                return depth, intrinsics
 
             else:
                 raise ValueError("Unsupported model type for inference")
@@ -110,28 +139,22 @@ class ModelManager:
             if self.makeSquareInput:
                 pad_top = self.pad_top
                 pad_left = self.pad_left
-
                 pred  = pred [pad_top : pad_top + resizedShape[0], pad_left: pad_left + resizedShape[1]]
                 image = image[pad_top : pad_top + resizedShape[0], pad_left: pad_left + resizedShape[1], :]
-                
-                pred  = cv2.resize(pred,  (gt.shape[1], gt.shape[0]), interpolation=cv2.INTER_CUBIC)
-                image = cv2.resize(image, (gt.shape[1], gt.shape[0]), interpolation=cv2.INTER_CUBIC)
-
             else:
                 crop_top = self.crop_top
                 crop_left = self.crop_left
-
                 vertMarg  = (crop_top * 2) / (resizedShape[0] / gt.shape[0])
                 horizMarg = (crop_left * 2) / (resizedShape[1] / gt.shape[1])
                 vertMarg = round(vertMarg / 2)                                # round to the nearest even number
                 horizMarg = round(horizMarg / 2)
                 gt = gt[vertMarg or None : (-vertMarg) or None, horizMarg or None : (-horizMarg) or None]
-                
-                pred  = cv2.resize(pred,  (gt.shape[1], gt.shape[0]), interpolation=cv2.INTER_CUBIC)
-                image = cv2.resize(image, (gt.shape[1], gt.shape[0]), interpolation=cv2.INTER_CUBIC)
 
         else:
             raise ValueError("Unsupported model type for shape alignment")        
+        
+        pred  = cv2.resize(pred,  (gt.shape[1], gt.shape[0]), interpolation=cv2.INTER_CUBIC)
+        image = cv2.resize(image, (gt.shape[1], gt.shape[0]), interpolation=cv2.INTER_CUBIC)
 
         return image, pred, gt
           

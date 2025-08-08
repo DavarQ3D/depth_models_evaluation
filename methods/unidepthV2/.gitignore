@@ -1,0 +1,17 @@
+# don't upload macOS folder info
+*.DS_Store
+
+#python
+*.pyc
+__pycache__/
+.vscode/
+
+#scripts
+_*.sh
+___*.py
+
+# package
+**/build/
+**/dist/
+**/*.egg-info/
+assets/

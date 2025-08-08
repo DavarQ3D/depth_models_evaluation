@@ -26,6 +26,33 @@ class DataManager:
     
     #=======================================================================
 
+    def getIntrinsics(self):
+        
+        if self.dtset == Dataset.IPHONE:
+            fx = fy = 1521
+            cx = 718
+            cy = 965
+        elif self.dtset == Dataset.NYU2:
+            fx = 518.858
+            fy = 519.470
+            cx = 325.582
+            cy = 253.736
+        elif self.dtset == Dataset.KITTI:
+            pass
+            # fx = fy = 721.537
+            # cx = (609.559 + 596.559) / 2.0
+            # cy = 149.854
+        else:
+            raise ValueError("Unsupported dataset")
+
+        intrinsics = np.array([[fx, 0, cx],
+                                [0, fy, cy],
+                                [0, 0, 1]], dtype=np.float32)
+
+        return intrinsics
+
+    #=======================================================================
+
     def getSamplePair(self, idx):
 
         if self.dtset == Dataset.IPHONE:

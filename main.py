@@ -14,7 +14,7 @@ if __name__ == '__main__':
 
     #--------------------- settings
     
-    dtset = Dataset.KITTI
+    dtset = Dataset.NYU2
     
     mdType = Model.Torch_depthAnythingV2_Rel
     encoder = "vits"
@@ -26,6 +26,8 @@ if __name__ == '__main__':
 
     makeSquareInput = True and (mdType == Model.Torch_depthAnythingV2_Rel or mdType == Model.Torch_depthAnythingV2_Metric)
     borderType = cv2.BORDER_CONSTANT
+
+    useIntrinsics = True and (dtset != Dataset.KITTI)
 
     showVisuals = True
 
@@ -60,6 +62,9 @@ if __name__ == '__main__':
         mPath = f'{temp}/depth_anything_v2_metric_vkitti_{encoder}.pth' if dtset == Dataset.KITTI else f'{temp}/depth_anything_v2_metric_hypersim_{encoder}.pth'
         max_depth = 80 if dtset == Dataset.KITTI else 20
 
+    elif mdType == Model.Torch_UNIDEPTH_V2:    
+        mPath = f"lpiccinelli/unidepth-v2-{encoder}14"
+
     else:
         raise ValueError("Unsupported model")
     
@@ -91,14 +96,21 @@ if __name__ == '__main__':
         
         if mdType == Model.Torch_depthAnythingV2_Rel: 
             bgr = mdManager.adaptShapeForInference(bgr, makeSquareInput, borderType, dim=518)
-            relDisparity = mdManager.infer(bgr)
+            relDisparity, _ = mdManager.infer(bgr)
             bgr, relDisparity, gt = mdManager.alignShapes(bgr, relDisparity, gt)
             metricDepth = mdManager.alignInDisparitySpace(relDisparity, gt, staticMask, k_hi)
 
         elif mdType == Model.Torch_depthAnythingV2_Metric:
             bgr = mdManager.adaptShapeForInference(bgr, makeSquareInput, borderType)
-            metricDepth = mdManager.infer(bgr)
+            metricDepth, _ = mdManager.infer(bgr)
             bgr, metricDepth, gt = mdManager.alignShapes(bgr, metricDepth, gt)
+
+        elif mdType == Model.Torch_UNIDEPTH_V2:
+            gtIntrinsics = dtManager.getIntrinsics() if useIntrinsics else None
+            metricDepth, intrinsics = mdManager.infer(bgr, gtIntrinsics)
+            bgr, metricDepth, gt = mdManager.alignShapes(bgr, metricDepth, gt)        
+
+            analyzer.compareIntrinsics(intrinsics, gtIntrinsics) 
 
         else:
             raise ValueError("Unsupported model type")
