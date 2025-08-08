@@ -1,38 +1,9 @@
 import cv2
 import numpy as np
-import torch
 from PIL import Image
 from pathlib import Path
 from sklearn.linear_model import RANSACRegressor
-from methods.relativeDepthAnythingV2.depth_anything_v2.util import transform
-
-#=============================================================================================================
-
-def loadTorchModel(modelPath, encoder, max_depth=None):
-    
-    DEVICE = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
-    model_configs = {
-        'vits': {'encoder': 'vits', 'features': 64, 'out_channels': [48, 96, 192, 384]},
-        'vitb': {'encoder': 'vitb', 'features': 128, 'out_channels': [96, 192, 384, 768]},
-        'vitl': {'encoder': 'vitl', 'features': 256, 'out_channels': [256, 512, 1024, 1024]},
-        'vitg': {'encoder': 'vitg', 'features': 384, 'out_channels': [1536, 1536, 1536, 1536]}
-    }    
-
-    if max_depth is None:
-        from methods.relativeDepthAnythingV2.depth_anything_v2.dpt import DepthAnythingV2                # relative depth head
-        depth_anything = DepthAnythingV2(**model_configs[encoder])
-    else:
-        from methods.metricDepthAnythingV2.depth_anything_v2 .dpt import DepthAnythingV2                 # metric depth head
-        depth_anything = DepthAnythingV2(**{**model_configs[encoder], 'max_depth': max_depth})
-    
-    depth_anything.load_state_dict(torch.load(modelPath, map_location='cpu'))
-    depth_anything = depth_anything.to(DEVICE).eval()
-    return depth_anything    
-
-#=============================================================================================================
-
-def inferFromTorch(model, image, input_size):
-    return model.infer_image(image, input_size, doResize=False)
+from methods.relativeDepthAnythingV2.depth_anything_v2.util import transform 
 
 #=============================================================================================================
 
@@ -53,35 +24,6 @@ def normalize(image):
 
 def denormalize(image):
     return (image * 255).astype(np.uint8)
-
-def analyzeAndPrepVis(rgb, mask, ref, pred, vertConcat=False):
-    
-    err = np.abs(ref - pred)
-    valid = err[mask]
-    rmse = np.sqrt((valid**2).mean())
-    print("valid pixels RMSE =", fp(rmse, 6))
-
-    ref = normalize(ref)
-    pred = normalize(pred)
-
-    err = np.clip(err, 0, valid.max())
-    err = normalize(err) 
-
-    ref = denormalize(ref)
-    pred = denormalize(pred)    
-    err = denormalize(err)
-
-    mask = mask.astype(np.uint8) * 255
-    mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
-    ref = cv2.cvtColor(ref, cv2.COLOR_GRAY2BGR)
-    pred = cv2.cvtColor(pred, cv2.COLOR_GRAY2BGR)
-    err = cv2.cvtColor(err, cv2.COLOR_GRAY2BGR)
-    err = cv2.applyColorMap(err, cv2.COLORMAP_JET)
-    err[mask == 0] = 0                 
-
-    visualRes = cv2.vconcat([rgb, mask, ref, pred, err]) if vertConcat else cv2.hconcat([rgb, mask, ref, pred, err])
-
-    return visualRes, rmse
 
 #=============================================================================================================
 
@@ -306,49 +248,6 @@ def getValidMaskAndClipExtremes(image, minVal, maxVal):
     return mask, image
 
 #=============================================================================================================
-
-def handlePredictionSteps(raw_image, gt, makeSquareInput, borderType, useCoreML, mlProgram, torch_model):
-
-    if makeSquareInput:
-        
-        sc = 518 / max(raw_image.shape[:2])
-        resized = cv2.resize(raw_image, (int(raw_image.shape[1] * sc), int(raw_image.shape[0] * sc)), interpolation=cv2.INTER_CUBIC)
-
-        r = 518
-        c = 518
-        cropped, pad_top, pad_left, _, _ = center_crop_or_pad(resized, r, c, borderType)
-
-        pred = inferFromCoreml(mlProgram, cropped) if useCoreML else inferFromTorch(torch_model, cropped, min(r, c))
-
-        pred    = pred   [pad_top : pad_top + resized.shape[0], pad_left: pad_left + resized.shape[1]]
-        cropped = cropped[pad_top : pad_top + resized.shape[0], pad_left: pad_left + resized.shape[1], :]
-        
-        pred    = cv2.resize(pred,    (gt.shape[1], gt.shape[0]), interpolation=cv2.INTER_CUBIC)
-        cropped = cv2.resize(cropped, (gt.shape[1], gt.shape[0]), interpolation=cv2.INTER_CUBIC)
-
-    else:    
-        sc = 518 / min(raw_image.shape[:2])
-        resized = cv2.resize(raw_image, (int(raw_image.shape[1] * sc), int(raw_image.shape[0] * sc)), interpolation=cv2.INTER_CUBIC)
-
-        r = ensure_multiple_of(resized.shape[0], multiple_of=14)
-        c = ensure_multiple_of(resized.shape[1], multiple_of=14)
-        cropped, _, _, top, left = center_crop_or_pad(resized, r, c)
-        
-        pred = inferFromCoreml(mlProgram, cropped) if useCoreML else inferFromTorch(torch_model, cropped, min(r, c))
-        
-        vertMarg  = (top * 2) / (resized.shape[0] / gt.shape[0])
-        horizMarg = (left * 2) / (resized.shape[1] / gt.shape[1])
-        vertMarg = round(vertMarg / 2)                                # round to the nearest even number
-        horizMarg = round(horizMarg / 2)
-        gt = gt[vertMarg or None : (-vertMarg) or None, horizMarg or None : (-horizMarg) or None]
-        
-        pred    = cv2.resize(pred,    (gt.shape[1], gt.shape[0]), interpolation=cv2.INTER_CUBIC)
-        cropped = cv2.resize(cropped, (gt.shape[1], gt.shape[0]), interpolation=cv2.INTER_CUBIC)
-
-    return pred, gt, cropped
-
-
-#=======================================================================
 
 def resizeImage(image, sc):
     if sc <= 0:

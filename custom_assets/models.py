@@ -1,5 +1,6 @@
 from enum import Enum
 from custom_assets.utils import *
+import torch
 
 class Model(Enum):
     Torch_depthAnythingV2_Rel = 1
