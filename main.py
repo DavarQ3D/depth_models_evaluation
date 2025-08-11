@@ -127,10 +127,12 @@ if __name__ == '__main__':
         #------------- error analysis
         #-------------------------------------------------
 
-        errImage = analyzer.runAnalysis(metricDepth, gt, staticMask, idx)
+        errImage, perImageCDE = analyzer.runAnalysis(metricDepth, gt, staticMask, idx)
         analyzer.sampleProcessed()
 
         if showVisuals:
+            if perImageCDE is not None:
+                visualizer.displayImage("CDE", perImageCDE, waitTime=1)
             sc = 2.5 if dtset == Dataset.IPHONE else 0.7 
             visualizer.showResults(bgr, metricDepth, gt, errImage, sc, vertConcat=(dtset == Dataset.KITTI))
         

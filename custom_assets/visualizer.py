@@ -10,9 +10,9 @@ class Visualizer:
     
     #=======================================================================
 
-    def displayImage(self, title, image):
+    def displayImage(self, title, image, waitTime=0):
         cv2.imshow(title, image)
-        key = cv2.waitKey(0)
+        key = cv2.waitKey(waitTime)
         if key == 27:  
             cv2.destroyAllWindows()
             exit()
