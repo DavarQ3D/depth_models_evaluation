@@ -96,37 +96,36 @@ class ModelManager:
 
     #=======================================================================
 
-    def infer(self, bgr, intrinsics=None):
+    def infer(self, bgr, intrinsics=None):      
 
-        with torch.no_grad():
+        if self.mdType == Model.Torch_depthAnythingV2_Rel or self.mdType == Model.Torch_depthAnythingV2_Metric:
+            return self.model.infer_image(bgr, self.dim, doResize=False), None
 
-            if self.mdType == Model.Torch_depthAnythingV2_Rel or self.mdType == Model.Torch_depthAnythingV2_Metric:
-                return self.model.infer_image(bgr, self.dim, doResize=False), None
+        elif self.mdType == Model.Torch_UNIDEPTH_V2:
+            
+            rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)       # convert bgr to rgb
+            rgbTensor = torch.from_numpy(np.array(rgb))
+            rgbTensor = rgbTensor.permute(2, 0, 1)           # c, h, w
 
-            elif self.mdType == Model.Torch_UNIDEPTH_V2:
-                
-                rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)       # convert bgr to rgb
-                rgbTensor = torch.from_numpy(np.array(rgb))
-                rgbTensor = rgbTensor.permute(2, 0, 1)           # c, h, w
-
-                intrinsics = torch.from_numpy(intrinsics)        # 3 x 3
-                camera = Pinhole(K=intrinsics) 
-                
+            intrinsics = torch.from_numpy(intrinsics).float().to(self.device)        # 3 x 3
+            camera = Pinhole(K=intrinsics) 
+            
+            with torch.no_grad():
                 predictions = self.model.infer(rgbTensor, camera=camera)
 
-                depth = predictions["depth"]                                 # metric depth
-                depth = depth[0,0].cpu().numpy()
-                
-                xyz = predictions["points"]                                  # point cloud in camera coordinates
-                xyz = xyz[0].cpu().permute(1, 2, 0).numpy()
+            depth = predictions["depth"]                                 # metric depth
+            depth = depth[0,0].cpu().numpy()
+            
+            xyz = predictions["points"]                                  # point cloud in camera coordinates
+            xyz = xyz[0].cpu().permute(1, 2, 0).numpy()
 
-                intrinsics = predictions["intrinsics"]                       # intrinsics prediction
-                intrinsics = intrinsics[0].cpu().numpy()
+            intrinsics = predictions["intrinsics"]                       # intrinsics prediction
+            intrinsics = intrinsics[0].cpu().numpy()
 
-                return depth, intrinsics
+            return depth, intrinsics
 
-            else:
-                raise ValueError("Unsupported model type for inference")
+        else:
+            raise ValueError("Unsupported model type for inference")
             
     #=======================================================================  
 
@@ -148,10 +147,7 @@ class ModelManager:
                 horizMarg = (crop_left * 2) / (resizedShape[1] / gt.shape[1])
                 vertMarg = round(vertMarg / 2)                                # round to the nearest even number
                 horizMarg = round(horizMarg / 2)
-                gt = gt[vertMarg or None : (-vertMarg) or None, horizMarg or None : (-horizMarg) or None]
-
-        else:
-            raise ValueError("Unsupported model type for shape alignment")        
+                gt = gt[vertMarg or None : (-vertMarg) or None, horizMarg or None : (-horizMarg) or None]    
         
         pred  = cv2.resize(pred,  (gt.shape[1], gt.shape[0]), interpolation=cv2.INTER_CUBIC)
         image = cv2.resize(image, (gt.shape[1], gt.shape[0]), interpolation=cv2.INTER_CUBIC)

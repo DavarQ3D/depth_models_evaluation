@@ -54,7 +54,7 @@ class Analyzer:
     
     #=======================================================================  
 
-    def compareIntrinsics(self, pred, gt):
+    def printIntrinsComparison(self, pred, gt):
     
         print(f"\nPred --> fx: {fp(pred[0, 0], 3)}, fy: {fp(pred[1, 1], 3)}, cx: {fp(pred[0, 2], 3)}, cy: {fp(pred[1, 2], 3)}")
         print(f"GT   --> fx: {fp(gt[0, 0], 3)}, fy: {fp(gt[1, 1], 3)}, cx: {fp(gt[0, 2], 3)}, cy: {fp(gt[1, 2], 3)}\n")

@@ -18,7 +18,7 @@ if __name__ == '__main__':
     
     dtset = Dataset.NYU2
     
-    mdType = Model.Torch_depthAnythingV2_Rel
+    mdType = Model.Torch_UNIDEPTH_V2
     encoder = "vits"
 
     alignDepth = False or mdType != Model.Torch_depthAnythingV2_Rel
@@ -110,9 +110,9 @@ if __name__ == '__main__':
         elif mdType == Model.Torch_UNIDEPTH_V2:
             gtIntrinsics = dtManager.getIntrinsics() if useIntrinsics else None
             metricDepth, intrinsics = mdManager.infer(bgr, gtIntrinsics)
-            bgr, metricDepth, gt = mdManager.alignShapes(bgr, metricDepth, gt)        
-
-            analyzer.compareIntrinsics(intrinsics, gtIntrinsics) 
+            bgr, metricDepth, gt = mdManager.alignShapes(bgr, metricDepth, gt)     
+            if dtset != Dataset.KITTI:
+                analyzer.printIntrinsComparison(intrinsics, gtIntrinsics) 
 
         else:
             raise ValueError("Unsupported model type")
