@@ -16,13 +16,13 @@ if __name__ == '__main__':
 
     #--------------------- settings
     
-    dtset = Dataset.NYU2
+    dtset = Dataset.IPHONE
     
     mdType = Model.Torch_UNIDEPTH_V2
     encoder = "vits"
 
-    alignDepth = False or mdType != Model.Torch_depthAnythingV2_Rel
-    fitScale = False
+    alignDepth = True or mdType != Model.Torch_depthAnythingV2_Rel
+    fitScale = True
     fitShift = False
     k_hi = 2.5 if dtset == Dataset.IPHONE else 3.0
 
