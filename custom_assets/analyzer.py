@@ -1,19 +1,24 @@
 
 import numpy as np
 from custom_assets.utils import *
+from enum import Enum
+
+class ErrorType(Enum):
+    ABS_REL = 1
+    RMSE = 2
 
 #==============================================================================================
 #==============================================================================================
 
 class Analyzer:
-    def __init__(self):
+    def __init__(self, errorType=ErrorType.ABS_REL):
         self.totalError = 0.0
-        self.meanErr = 0.0
         self.sampleWithLowestError = 0
         self.samplewithHighestError = 0
-        self.minRMSE = float('inf')
-        self.maxRMSE = float('-inf')
+        self.minErr = float('inf')
+        self.maxErr = float('-inf')
         self.sampleCounter = 0
+        self.errorType = errorType
 
     #=======================================================================  
 
@@ -24,24 +29,31 @@ class Analyzer:
 
     def runAnalysis(self, pred, ref, mask, idx):
 
-        err = np.abs(ref - pred)
-        valid = err[mask]
-        rmse = np.sqrt((valid**2).mean())
-        print("valid pixels RMSE =", fp(rmse, 6))
+        if self.errorType == ErrorType.ABS_REL:
+            err = np.abs(ref - pred) / (ref + 1e-6)
+            valid = err[mask]
+            perImgError = valid.mean()
+        elif self.errorType == ErrorType.RMSE:
+            err = np.abs(ref - pred)
+            valid = err[mask]
+            perImgError = np.sqrt((valid**2).mean())   
+        else:
+            raise ValueError("Unsupported error type")
 
-        if rmse < self.minRMSE:
-            self.minRMSE = rmse
+        print("ErrType:", self.errorType.name, "--> per image (valid pixels) err =", fp(perImgError, 6))    
+
+        if perImgError < self.minErr:
+            self.minErr = perImgError
             self.sampleWithLowestError = idx
-        if rmse > self.maxRMSE:
-            self.maxRMSE = rmse
+        if perImgError > self.maxErr:
+            self.maxErr = perImgError
             self.samplewithHighestError = idx
 
-        self.totalError += rmse
+        self.totalError += perImgError
         meanErr = self.totalError / (self.sampleCounter + 1)
-        self.sampleCounter += 1
-        print("\nmean across all images so far --> RMSE =", fp(meanErr, 6))
-        print("\nimage with lowest error:", self.sampleWithLowestError, "--> RMSE =", fp(self.minRMSE, 6))
-        print("image with highest error:", self.samplewithHighestError, "--> RMSE =", fp(self.maxRMSE, 6))
+        print("\ndataset err (mean) so far --> err =", fp(meanErr, 6))
+        print("\nimage with lowest error:", self.sampleWithLowestError, "--> err =", fp(self.minErr, 6))
+        print("image with highest error:", self.samplewithHighestError, "--> err =", fp(self.maxErr, 6))
 
         err = np.clip(err, 0, valid.max())
         err = normalize(err) 

@@ -5,7 +5,7 @@ from custom_assets.datasets import Dataset, DataManager
 from custom_assets.visualizer import Visualizer
 from custom_assets.utils import *
 from custom_assets.models import Model, ModelManager
-from custom_assets.analyzer import Analyzer
+from custom_assets.analyzer import Analyzer, ErrorType
 
 #=============================================================================================================
 
@@ -31,6 +31,7 @@ if __name__ == '__main__':
 
     useIntrinsics = True and (dtset != Dataset.KITTI)
 
+    errType = ErrorType.ABS_REL
     showVisuals = True
 
     #--------------------- dataset 
@@ -74,7 +75,7 @@ if __name__ == '__main__':
 
     #--------------------- analyzer
 
-    analyzer = Analyzer()
+    analyzer = Analyzer(errType)
 
     #------------------ inference loop
     #------------------------------------------------------------------
