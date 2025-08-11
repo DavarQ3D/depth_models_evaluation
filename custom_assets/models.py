@@ -35,7 +35,7 @@ class ModelManager:
         elif mdType == Model.Torch_UNIDEPTH_V2:
             self.model = UniDepthV2.from_pretrained(mPath)
             self.model.interpolation_mode = "bilinear"      # set interpolation mode (only V2)
-            # self.model.resolution_level = 9               # set resolution level (only V2)
+            self.model.resolution_level = 9                 # set resolution level [0-9] (only V2)
 
         else:
             raise ValueError("Unsupported model type")
