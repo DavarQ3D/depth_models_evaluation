@@ -16,7 +16,7 @@ if __name__ == '__main__':
 
     #--------------------- settings
     
-    dtset = Dataset.IPHONE
+    dtset = Dataset.KITTI
     
     mdType = Model.Torch_UNIDEPTH_V2
     encoder = "vits"

@@ -107,8 +107,10 @@ class ModelManager:
             rgbTensor = torch.from_numpy(np.array(rgb))
             rgbTensor = rgbTensor.permute(2, 0, 1)           # c, h, w
 
-            intrinsics = torch.from_numpy(intrinsics).float().to(self.device)        # 3 x 3
-            camera = Pinhole(K=intrinsics) 
+            camera = None
+            if intrinsics is not None:
+                K = torch.from_numpy(intrinsics).float().to(self.device)  # 3 x 3
+                camera = Pinhole(K=K)
             
             with torch.no_grad():
                 predictions = self.model.infer(rgbTensor, camera=camera)
