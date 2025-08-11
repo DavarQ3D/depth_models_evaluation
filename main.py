@@ -1,9 +1,11 @@
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "methods", "unidepthv2"))
+
 from custom_assets.datasets import Dataset, DataManager
 from custom_assets.visualizer import Visualizer
 from custom_assets.utils import *
 from custom_assets.models import Model, ModelManager
 from custom_assets.analyzer import Analyzer
-import os
 
 #=============================================================================================================
 

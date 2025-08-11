@@ -6,10 +6,10 @@ import torch
 try:
     from unidepth.ops.knn import knn_points
 except ImportError as e:
-    warnings.warn(
-        "!! To run evaluation you need KNN. Please compile KNN: "
-        "`cd unidepth/ops/knn with && bash compile.sh`."
-    )
+    # warnings.warn(
+    #     "!! To run evaluation you need KNN. Please compile KNN: "
+    #     "`cd unidepth/ops/knn with && bash compile.sh`."
+    # )
     knn_points = lambda x : x
 
 
