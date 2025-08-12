@@ -24,4 +24,4 @@ class Visualizer:
         gt = makeMultiChannelImage(gt)
         result = cv2.vconcat([bgr, metricDepth, gt, errImage]) if vertConcat else cv2.hconcat([bgr, metricDepth, gt, errImage])  
         result = cv2.resize(result, None, fx=sc, fy=sc, interpolation=cv2.INTER_CUBIC)
-        displayImage("visualRes", result)      
+        self.displayImage("visualRes", result)      

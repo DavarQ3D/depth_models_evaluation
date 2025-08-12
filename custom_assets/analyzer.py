@@ -2,8 +2,10 @@
 import numpy as np
 from custom_assets.utils import *
 from enum import Enum
+
+from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-import matplotlib.pyplot as plt
+from matplotlib.ticker import MultipleLocator
 
 class ErrorType(Enum):
     ABS_REL = 1
@@ -21,6 +23,8 @@ class Analyzer:
         self.maxErr = float('-inf')
         self.sampleCounter = 0
         self.errorType = errorType
+        self.imgValidPixsErrs = None
+        self.datasetValidPixsErrs = []
 
     #=======================================================================  
 
@@ -35,33 +39,38 @@ class Analyzer:
         n = errors.size
         Ps = (np.arange(1, n + 1, dtype=np.float32) * 100.0) / n
 
-        fig = plt.figure(figsize=(15, 9), dpi=100)
+        fig = Figure(figsize=(15, 9), dpi=100)
+        canvas = FigureCanvas(fig)
         ax = fig.add_subplot(111)
-        ax.plot(errors, Ps, color="black", linestyle='-')
+        ax.plot(errors, Ps, linestyle='-')
+
+        ax.xaxis.set_major_locator(MultipleLocator(0.03))
+        # ax.xaxis.set_major_locator(MaxNLocator(nbins=major_nbins))
+        # ax.xaxis.set_minor_locator(AutoMinorLocator(minor_divisions))
+        # ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))  # nice labels
+
         ax.set_title("Cumulative Error Distribution")
         ax.set_xlabel("Error")
         ax.set_ylabel("Percentage of Samples")
         ax.set_yticks(np.linspace(0, 100, 21))
-        ax.grid(True)
+        ax.grid(True, which='major', linewidth=0.8, alpha=0.6)
+        ax.grid(True, which='minor', linewidth=0.5, alpha=0.3)
         fig.tight_layout()
 
-        canvas = FigureCanvas(fig)
         canvas.draw()
-        rgba = np.asarray(canvas.buffer_rgba())       
+        rgba = np.asarray(canvas.buffer_rgba(), dtype=np.uint8)
         bgr  = cv2.cvtColor(rgba, cv2.COLOR_RGBA2BGR)
-        plt.close(fig)
         return bgr
 
     #=======================================================================  
 
     def runAnalysis(self, pred, ref, mask, idx):
 
-        perImageCDE = None
-
         if self.errorType == ErrorType.ABS_REL:
             err = np.abs(ref - pred) / (ref + 1e-6)
             valid = err[mask]
-            perImageCDE = self.generateCDEgraph(valid)
+            self.imgValidPixsErrs = valid
+            self.datasetValidPixsErrs.append(valid)
             perImgError = valid.mean()
         elif self.errorType == ErrorType.RMSE:
             err = np.abs(ref - pred)
@@ -92,7 +101,7 @@ class Analyzer:
         err = cv2.applyColorMap(err, cv2.COLORMAP_JET)
         err[mask == 0] = 0      
 
-        return err, perImageCDE
+        return err
     
     #=======================================================================  
 

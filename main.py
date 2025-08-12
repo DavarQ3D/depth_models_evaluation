@@ -33,6 +33,7 @@ if __name__ == '__main__':
 
     errType = ErrorType.ABS_REL
     showVisuals = True
+    showPerImageCDE = True and (errType == ErrorType.ABS_REL)
 
     #--------------------- dataset 
 
@@ -127,12 +128,13 @@ if __name__ == '__main__':
         #------------- error analysis
         #-------------------------------------------------
 
-        errImage, perImageCDE = analyzer.runAnalysis(metricDepth, gt, staticMask, idx)
+        errImage = analyzer.runAnalysis(metricDepth, gt, staticMask, idx)
         analyzer.sampleProcessed()
 
         if showVisuals:
-            if perImageCDE is not None:
-                visualizer.displayImage("CDE", perImageCDE, waitTime=1)
+            if showPerImageCDE:
+                perImageCDE = analyzer.generateCDEgraph(analyzer.imgValidPixsErrs)
+                visualizer.displayImage("Per Image CDE", perImageCDE, waitTime=1)
             sc = 2.5 if dtset == Dataset.IPHONE else 0.7 
             visualizer.showResults(bgr, metricDepth, gt, errImage, sc, vertConcat=(dtset == Dataset.KITTI))
         
