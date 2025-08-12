@@ -16,12 +16,12 @@ if __name__ == '__main__':
 
     #--------------------- settings
     
-    dtset = Dataset.KITTI
+    dtset = Dataset.IPHONE
     
     mdType = Model.Torch_depthAnythingV2_Rel
     encoder = "vits"
 
-    alignDepth = True or mdType != Model.Torch_depthAnythingV2_Rel
+    alignDepth = True      # alignment is highly encouraged even on the best metric depth models
     fitScale = True
     fitShift = False
     k_hi = 2.5 if dtset == Dataset.IPHONE else 3.0
@@ -35,6 +35,9 @@ if __name__ == '__main__':
     maxNumSamplesToAnalyze = 60
     showVisuals = True
     showPerImageCDE = True and (errType == ErrorType.ABS_REL)
+
+    alignmentID = f"fitScale[{fitScale}]_fitShift[{fitShift}]" if alignDepth else "noAlignment"
+    experimentID = f"{mdType.name}_{dtset.name}_{alignmentID}"
 
     #--------------------- dataset 
 
@@ -143,9 +146,8 @@ if __name__ == '__main__':
     #--------------------- end of inference loop ----------------------
     #------------------------------------------------------------------
 
-    datasetErrors = analyzer.getDatasetErrors()
-    perDatasetCDE = analyzer.generateCDEgraph(datasetErrors)
-    cv2.imwrite(os.path.join(outdir, f"{mdType.name}_{dtset.name}.png"), perDatasetCDE)
-    visualizer.displayImage("Per Dataset CDE", perDatasetCDE, waitTime=0)
+    outPath = os.path.join(outdir, "graphs", f"{experimentID}.txt")
+    writeVecOnDisk(outPath, analyzer.getDatasetErrors())
+
         
 

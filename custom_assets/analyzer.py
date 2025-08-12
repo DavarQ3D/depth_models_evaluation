@@ -2,7 +2,7 @@
 import numpy as np
 from custom_assets.utils import *
 from enum import Enum
-
+import os
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.ticker import MaxNLocator
@@ -47,9 +47,6 @@ class Analyzer:
 
         ax.set_xlim(0, 1.0)
         ax.xaxis.set_major_locator(MaxNLocator(nbins=30))
-        # ax.xaxis.set_minor_locator(AutoMinorLocator(3))
-        # ax.xaxis.set_major_locator(MultipleLocator(0.1))
-        # ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))  # nice labels
 
         ax.set_title("Cumulative Error Distribution")
         ax.set_xlabel("Error")
@@ -117,3 +114,56 @@ class Analyzer:
         print(f"\nPred --> fx: {fp(pred[0, 0], 3)}, fy: {fp(pred[1, 1], 3)}, cx: {fp(pred[0, 2], 3)}, cy: {fp(pred[1, 2], 3)}")
         print(f"GT   --> fx: {fp(gt[0, 0], 3)}, fy: {fp(gt[1, 1], 3)}, cx: {fp(gt[0, 2], 3)}, cy: {fp(gt[1, 2], 3)}\n")
 
+    #======================================================================= 
+
+    def loadErrorVecsFromFolder(self, folderPath):
+
+        errorVecs = {}        
+
+        for fileName in os.listdir(folderPath):
+            if fileName.endswith(".txt"):
+                filePath = os.path.join(folderPath, fileName)
+                vec = loadVecFromFile(filePath)
+                key = os.path.splitext(fileName)[0]
+                errorVecs[key] = vec
+
+        return errorVecs
+
+    #======================================================================= 
+
+    def generateCombingedCDEgraph(self, errDict):
+
+        fig = Figure(figsize=(13, 9), dpi=100)
+        canvas = FigureCanvas(fig)
+        ax = fig.add_subplot()
+
+        plotted_any = False
+        for label, arr in errDict.items():
+            arr = np.asarray(arr, dtype=np.float32)
+            if arr.size == 0:
+                continue
+            arr.sort()
+            n = arr.size
+            Ps = (np.arange(1, n + 1, dtype=np.float32) * 100.0) / n
+            ax.plot(arr, Ps, linestyle='-', label=str(label))
+            plotted_any = True
+
+        ax.set_ylim(0, 100)
+        ax.set_xlim(0, 1.0)
+        ax.xaxis.set_major_locator(MaxNLocator(nbins=30))
+
+        ax.set_title("Cumulative Error Distribution")
+        ax.set_xlabel("Error")
+        ax.set_ylabel("Percentage of Samples")
+        ax.set_yticks(np.linspace(0, 100, 21))
+        ax.grid(True, which='major', linewidth=0.8, alpha=0.6)
+        ax.grid(True, which='minor', linewidth=0.5, alpha=0.3)
+
+        if plotted_any:
+            ax.legend(loc='lower right', frameon=False)
+
+        fig.tight_layout()
+        canvas.draw()
+        rgba = np.asarray(canvas.buffer_rgba(), dtype=np.uint8)
+        bgr = cv2.cvtColor(rgba, cv2.COLOR_RGBA2BGR)
+        return bgr

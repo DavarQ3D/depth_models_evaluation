@@ -263,3 +263,22 @@ def makeMultiChannelImage(depth):
     depth = denormalize(depth)
     depth = cv2.cvtColor(depth, cv2.COLOR_GRAY2BGR)
     return depth
+
+#=============================================================================================================
+ 
+def writeVecOnDisk(path, input):
+    path = Path(path)
+    with open(path, 'w') as f:
+        for value in input:
+            f.write(f"{value:.6f}\n")
+    print(f"\nVector written to {path}")
+
+#=============================================================================================================
+
+def loadVecFromFile(path):
+    path = Path(path)
+    if not path.exists():
+        raise FileNotFoundError(f"File not found: {path}")
+    with open(path, 'r') as f:
+        vec = [float(line.strip()) for line in f]
+    return np.array(vec, dtype=np.float32)
