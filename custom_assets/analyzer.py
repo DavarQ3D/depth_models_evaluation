@@ -39,7 +39,7 @@ class Analyzer:
         n = errors.size
         Ps = (np.arange(1, n + 1, dtype=np.float32) * 100.0) / n
 
-        fig = Figure(figsize=(13, 9), dpi=100)
+        fig = Figure(figsize=(13, 9), dpi=75)
         canvas = FigureCanvas(fig)
         ax = fig.add_subplot()
         ax.plot(errors, Ps, linestyle='-')
