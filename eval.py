@@ -15,5 +15,4 @@ if __name__ == '__main__':
     combinedCDE = analyzer.generateCombingedCDEgraph(errDict)
     cv2.imwrite(os.path.join(path, "result.png"), combinedCDE)
     visualizer.displayImage("result", combinedCDE, waitTime=0)
-
-
+    
