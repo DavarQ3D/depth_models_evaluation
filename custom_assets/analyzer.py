@@ -45,7 +45,7 @@ class Analyzer:
         ax.plot(errors, Ps, linestyle='-')
 
         ax.set_xlim(0, 1.0)
-        ax.xaxis.set_major_locator(MaxNLocator(nbins=20))
+        ax.xaxis.set_major_locator(MaxNLocator(nbins=30))
         # ax.xaxis.set_minor_locator(AutoMinorLocator(3))
         # ax.xaxis.set_major_locator(MultipleLocator(0.1))
         # ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))  # nice labels
