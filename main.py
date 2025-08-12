@@ -18,7 +18,7 @@ if __name__ == '__main__':
     
     dtset = Dataset.KITTI
     
-    mdType = Model.Torch_UNIDEPTH_V2
+    mdType = Model.Torch_depthAnythingV2_Rel
     encoder = "vits"
 
     alignDepth = True or mdType != Model.Torch_depthAnythingV2_Rel
@@ -145,6 +145,7 @@ if __name__ == '__main__':
 
     datasetErrors = analyzer.getDatasetErrors()
     perDatasetCDE = analyzer.generateCDEgraph(datasetErrors)
+    cv2.imwrite(os.path.join(outdir, f"{mdType.name}_{dtset.name}.png"), perDatasetCDE)
     visualizer.displayImage("Per Dataset CDE", perDatasetCDE, waitTime=0)
         
 
