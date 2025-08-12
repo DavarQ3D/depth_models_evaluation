@@ -43,6 +43,7 @@ class Analyzer:
         canvas = FigureCanvas(fig)
         ax = fig.add_subplot()
         ax.plot(errors, Ps, linestyle='-')
+        ax.set_ylim(0, 100)  
 
         ax.set_xlim(0, 1.0)
         ax.xaxis.set_major_locator(MaxNLocator(nbins=30))
