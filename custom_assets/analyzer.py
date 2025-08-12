@@ -5,7 +5,7 @@ from enum import Enum
 
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-from matplotlib.ticker import MultipleLocator
+from matplotlib.ticker import MaxNLocator
 
 class ErrorType(Enum):
     ABS_REL = 1
@@ -39,14 +39,15 @@ class Analyzer:
         n = errors.size
         Ps = (np.arange(1, n + 1, dtype=np.float32) * 100.0) / n
 
-        fig = Figure(figsize=(15, 9), dpi=100)
+        fig = Figure(figsize=(13, 9), dpi=100)
         canvas = FigureCanvas(fig)
-        ax = fig.add_subplot(111)
+        ax = fig.add_subplot()
         ax.plot(errors, Ps, linestyle='-')
 
-        ax.xaxis.set_major_locator(MultipleLocator(0.03))
-        # ax.xaxis.set_major_locator(MaxNLocator(nbins=major_nbins))
-        # ax.xaxis.set_minor_locator(AutoMinorLocator(minor_divisions))
+        ax.set_xlim(0, 1.0)
+        ax.xaxis.set_major_locator(MaxNLocator(nbins=20))
+        # ax.xaxis.set_minor_locator(AutoMinorLocator(3))
+        # ax.xaxis.set_major_locator(MultipleLocator(0.1))
         # ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))  # nice labels
 
         ax.set_title("Cumulative Error Distribution")
@@ -59,7 +60,7 @@ class Analyzer:
 
         canvas.draw()
         rgba = np.asarray(canvas.buffer_rgba(), dtype=np.uint8)
-        bgr  = cv2.cvtColor(rgba, cv2.COLOR_RGBA2BGR)
+        bgr = cv2.cvtColor(rgba, cv2.COLOR_RGBA2BGR)
         return bgr
 
     #=======================================================================  
@@ -104,6 +105,11 @@ class Analyzer:
         return err
     
     #=======================================================================  
+
+    def getDatasetErrors(self):
+        return np.concatenate(self.datasetValidPixsErrs) 
+
+    #======================================================================= 
 
     def printIntrinsComparison(self, pred, gt):
     

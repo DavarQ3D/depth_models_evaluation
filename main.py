@@ -32,6 +32,7 @@ if __name__ == '__main__':
     useIntrinsics = True and (dtset != Dataset.KITTI)
 
     errType = ErrorType.ABS_REL
+    maxNumSamplesToAnalyze = 60
     showVisuals = True
     showPerImageCDE = True and (errType == ErrorType.ABS_REL)
 
@@ -80,8 +81,9 @@ if __name__ == '__main__':
 
     #------------------ inference loop
     #------------------------------------------------------------------
+    upperBound = min(numFiles, maxNumSamplesToAnalyze) 
 
-    for idx in range(0, numFiles):
+    for idx in range(0, upperBound):
 
         print('\n'"========================================")
         print(f'============= sample --> {idx} =============')
@@ -137,5 +139,12 @@ if __name__ == '__main__':
                 visualizer.displayImage("Per Image CDE", perImageCDE, waitTime=1)
             sc = 2.5 if dtset == Dataset.IPHONE else 0.7 
             visualizer.showResults(bgr, metricDepth, gt, errImage, sc, vertConcat=(dtset == Dataset.KITTI))
+
+    #--------------------- end of inference loop ----------------------
+    #------------------------------------------------------------------
+
+    datasetErrors = analyzer.getDatasetErrors()
+    perDatasetCDE = analyzer.generateCDEgraph(datasetErrors)
+    visualizer.displayImage("Per Dataset CDE", perDatasetCDE, waitTime=0)
         
 
