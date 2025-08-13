@@ -18,7 +18,7 @@ if __name__ == '__main__':
     
     dtset = Dataset.IPHONE
     
-    mdType = Model.Torch_depthAnythingV2_Rel
+    mdType = Model.Torch_UNIDEPTH_V2
     encoder = "vits"
 
     alignDepth = True      # alignment is highly encouraged even on the best metric depth models
@@ -37,7 +37,8 @@ if __name__ == '__main__':
     showPerImageCDE = True and (errType == ErrorType.ABS_REL)
 
     alignmentID = f"fitScale[{fitScale}]_fitShift[{fitShift}]" if alignDepth else "noAlignment"
-    experimentID = f"{mdType.name}_{dtset.name}_{alignmentID}"
+    experimentID = f"{mdType.name}_{alignmentID}"
+    experimentFolder = dtset.name
 
     #--------------------- dataset 
 
@@ -146,8 +147,16 @@ if __name__ == '__main__':
     #--------------------- end of inference loop ----------------------
     #------------------------------------------------------------------
 
-    outPath = os.path.join(outdir, "graphs", f"{experimentID}.txt")
-    writeVecOnDisk(outPath, analyzer.getDatasetErrors())
+    #---------- save experiment result
+    folderPath = os.path.join(outdir, experimentFolder)
+    os.makedirs(folderPath, exist_ok=True)
+    writeVecOnDisk(folderPath + f"/{experimentID}.txt", analyzer.getDatasetErrors())
+
+    #---------- update evaluation graphs
+    errDict = analyzer.loadErrorVecsFromFolder(folderPath)
+    combinedCDE = analyzer.generateCombingedCDEgraph(errDict)
+    cv2.imwrite(folderPath + f"/{dtset.name}_data.png", combinedCDE)
+    visualizer.displayImage(f"{dtset.name}_data", combinedCDE, waitTime=0)
 
         
 
