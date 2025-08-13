@@ -1,13 +1,17 @@
-from enum import Enum
 from custom_assets.utils import *
 import torch
 from methods.unidepthV2.unidepth.models import UniDepthV2
 from methods.unidepthV2.unidepth.utils.camera import Pinhole
+from enum import Enum
 
 class Model(Enum):
     Torch_depthAnythingV2_Rel = 1
     Torch_depthAnythingV2_Metric = 2
     Torch_UNIDEPTH_V2 = 3
+
+class AlignmentType(Enum):
+    MedianBased = 1
+    Fitting = 2    
 
 #==============================================================================================
 #==============================================================================================
@@ -173,18 +177,21 @@ class ModelManager:
     
     #=======================================================================  
 
-    def alignInDepthSpace(self, pred, gt, mask, k_hi, fitScale, fitShift, maxVal):
+    def alignInDepthSpace(self, pred, gt, mask, alignmentType, k_hi, alignShift, maxVal):
     
         predMask, pred = getValidMaskAndClipExtremes(pred, minVal=0.01, maxVal=maxVal)
         mask = mask & predMask
         
-        if fitScale:
-            scale, shift, mask = weightedLeastSquared(pred, gt, guessInitPrms=True, k_lo=0.2, k_hi=k_hi, num_iters=10, fit_shift=fitShift, verbose=False, mask=mask)
+        if alignmentType == AlignmentType.Fitting:
+            scale, shift, mask = weightedLeastSquared(pred, gt, guessInitPrms=True, k_lo=0.2, k_hi=k_hi, num_iters=10, fit_shift=alignShift, verbose=False, mask=mask)
 
-        else:
+        elif alignmentType == AlignmentType.MedianBased:
             x = pred[mask].ravel()  
             y = gt[mask].ravel()   
-            scale, shift = estimateInitialParams(x, y, fitShift=False)     
+            scale, shift = estimateInitialParams(x, y, alignShift=alignShift)     
+
+        else:
+            raise ValueError("Unsupported alignment type")
 
         print("Scale:", fp(scale), ", Shift:", fp(shift), '\n')
 

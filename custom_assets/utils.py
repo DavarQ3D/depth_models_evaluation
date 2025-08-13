@@ -157,7 +157,7 @@ def robustNormalize(x):
 
 #=============================================================================================================
 
-def estimateInitialParams(x, y, fitShift):
+def estimateInitialParams(x, y, alignShift):
 
     t_pred = np.median(x)
     s_pred = np.mean(np.abs(x - t_pred)) if len(x) > 0 else 1.0
@@ -166,7 +166,7 @@ def estimateInitialParams(x, y, fitShift):
     s_gt = np.mean(np.abs(y - t_gt)) if len(y) > 0 else 1.0  
 
     scale = s_gt / s_pred 
-    shift = t_gt - scale * t_pred if fitShift else 0.0
+    shift = t_gt - scale * t_pred if alignShift else 0.0
     
     return scale, shift
 

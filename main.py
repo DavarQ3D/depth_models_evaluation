@@ -4,7 +4,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "methods", "unidepthv
 from custom_assets.datasets import Dataset, DataManager
 from custom_assets.visualizer import Visualizer
 from custom_assets.utils import *
-from custom_assets.models import Model, ModelManager
+from custom_assets.models import Model, ModelManager, AlignmentType
 from custom_assets.analyzer import Analyzer, ErrorType
 
 #=============================================================================================================
@@ -21,9 +21,9 @@ if __name__ == '__main__':
     mdType = Model.Torch_UNIDEPTH_V2
     encoder = "vits"
 
-    alignDepth = True      # alignment is highly encouraged even on the best metric depth models
-    fitScale = True
-    fitShift = False
+    alignDepth = True                                 # alignment is highly encouraged even on the best metric depth models
+    alignmentType = AlignmentType.Fitting   
+    alignShift = True                                 # scale is always applied if alignDepth is True, shift is optional
     k_hi = 2.5 if dtset == Dataset.IPHONE else 3.0
 
     makeSquareInput = True and (mdType == Model.Torch_depthAnythingV2_Rel or mdType == Model.Torch_depthAnythingV2_Metric)
@@ -36,7 +36,7 @@ if __name__ == '__main__':
     showVisuals = True
     showPerImageCDE = True and (errType == ErrorType.ABS_REL)
 
-    alignmentID = f"fitScale[{fitScale}]_fitShift[{fitShift}]" if alignDepth else "noAlignment"
+    alignmentID = f"alignmentType[{alignmentType.name}]_alignShift[{alignShift}]" if alignDepth else "noAlignmentInDepthSpace"
     experimentID = f"{mdType.name}_{alignmentID}"
     experimentFolder = dtset.name
 
@@ -129,7 +129,7 @@ if __name__ == '__main__':
         #-------------------------------------------------
         
         if alignDepth:
-            metricDepth = mdManager.alignInDepthSpace(metricDepth, gt, staticMask, k_hi, fitScale, fitShift, maxVal)
+            metricDepth = mdManager.alignInDepthSpace(metricDepth, gt, staticMask, alignmentType, k_hi, alignShift, maxVal)
         
         #------------- error analysis
         #-------------------------------------------------
