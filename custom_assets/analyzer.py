@@ -7,6 +7,7 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.ticker import MaxNLocator
 from concurrent.futures import ThreadPoolExecutor
+import heapq
 
 class ErrorType(Enum):
     ABS_REL = 1
@@ -70,7 +71,7 @@ class Analyzer:
             err = np.abs(ref - pred) / (ref + 1e-6)
             valid = err[mask]
             self.imgValidPixsErrs = valid
-            self.datasetValidPixsErrs.append(valid)
+            self.datasetValidPixsErrs.append(np.sort(valid))
             perImgError = valid.mean()
         elif self.errorType == ErrorType.RMSE:
             err = np.abs(ref - pred)
@@ -106,7 +107,8 @@ class Analyzer:
     #=======================================================================  
 
     def getDatasetErrors(self):
-        return np.concatenate(self.datasetValidPixsErrs) 
+        merged_iterator = heapq.merge(*self.datasetValidPixsErrs)
+        return np.fromiter(merged_iterator, dtype=np.float32)
 
     #======================================================================= 
 
@@ -160,38 +162,18 @@ class Analyzer:
         ax = fig.add_subplot()
 
         plotted_any = False
-
-        # Use common bin edges across series (consistent with xlim=[0, 1.0])
-        # Large arrays take the fast histogram path; small arrays keep the exact sort.
-        bins = 4096
-        x_min, x_max = 0.0, 0.72
-        edges = np.linspace(x_min, x_max, bins + 1, dtype=np.float32)
-
         for label, arr in errDict.items():
             arr = np.asarray(arr, dtype=np.float32)
             if arr.size == 0:
                 continue
 
-            # ---------- FAST PATH: histogram-based CDF (no O(N log N) sort) ----------
-            if arr.size > 200_000:
-                # keep consistency with axis limits; values outside [0,1] would be clipped visually anyway
-                arr = np.clip(arr, x_min, x_max)
-                h, _ = np.histogram(arr, bins=edges)
-                Ps = (np.cumsum(h, dtype=np.int64) * 100.0) / arr.size
-                xs = edges[1:]
-                ax.plot(xs, Ps, linestyle='-', label=str(label))
-
-            # ---------- EXACT PATH: original behavior for smaller arrays ----------
-            else:
-                arr = np.sort(arr, kind='quicksort')  # returns a writable sorted copy
-                n = arr.size
-                Ps = (np.arange(1, n + 1, dtype=np.float32) * 100.0) / n
-                ax.plot(arr, Ps, linestyle='-', label=str(label))
-
+            n = arr.size
+            Ps = (np.arange(1, n + 1, dtype=np.float32) * 100.0) / n
+            ax.plot(arr, Ps, linestyle='-', label=str(label))
             plotted_any = True
 
         ax.set_ylim(0, 100)
-        ax.set_xlim(0, x_max)
+        ax.set_xlim(0, 0.72)
         ax.xaxis.set_major_locator(MaxNLocator(nbins=25))
 
         ax.set_title("Cumulative Error Distribution")
@@ -209,3 +191,4 @@ class Analyzer:
         rgba = np.asarray(canvas.buffer_rgba(), dtype=np.uint8)
         bgr = cv2.cvtColor(rgba, cv2.COLOR_RGBA2BGR)
         return bgr
+
