@@ -40,7 +40,7 @@ if __name__ == '__main__':
 
     alignmentID = f"aligType[{alignmentType.name}]_alignShift[{alignShift}]" if alignDepth else "noAlignmentInDepthSpace"
     experimentID = f"{mdType.name}_{alignmentID}"
-    experimentFolder = dtset.name
+    experimentFolder = f"{mdType.name}_{dtset.name}"
     folderPath = os.path.join(outdir, experimentFolder)
 
     #--------------------- dataset 

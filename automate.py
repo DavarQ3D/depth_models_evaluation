@@ -8,7 +8,7 @@ from custom_assets.datasets import Dataset
 from custom_assets.models import Model, AlignmentType
 
 dtset = Dataset.IPHONE  
-model = Model.Torch_UNIDEPTH_V2  
+model = Model.Torch_depthAnythingV2_Rel  
 
 experiments = [
     {
