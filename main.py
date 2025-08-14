@@ -33,10 +33,9 @@ if __name__ == '__main__':
 
     errType = ErrorType.ABS_REL
     maxNumSamplesToAnalyze = 100
-    showVisuals = True
+    showVisuals = False
     showPerImageCDE = True and (errType == ErrorType.ABS_REL)
 
-    runExperiment = True
     alignmentID = f"aligType[{alignmentType.name}]_alignShift[{alignShift}]" if alignDepth else "noAlignmentInDepthSpace"
     experimentID = f"{mdType.name}_{alignmentID}"
     experimentFolder = dtset.name
@@ -89,69 +88,68 @@ if __name__ == '__main__':
     #------------------------------------------------------------------
     upperBound = min(numFiles, maxNumSamplesToAnalyze) 
 
-    if runExperiment:
-        for idx in range(0, upperBound):
+    for idx in range(0, upperBound):
 
-            print('\n'"========================================")
-            print(f'============= sample --> {idx} =============')
-            print("========================================", '\n')
+        print('\n'"========================================")
+        print(f'============= sample --> {idx} =============')
+        print("========================================", '\n')
 
-            bgr, gt = dtManager.getSamplePair(idx)
+        bgr, gt = dtManager.getSamplePair(idx)
 
-            #------------- static mask
-            #-------------------------------------------------
-            
-            maxVal = 50.0 if dtset == Dataset.KITTI else 15.0
-            staticMask, gt = getValidMaskAndClipExtremes(gt, minVal=0.01, maxVal=maxVal) 
-            
-            #------------- metric depth inference
-            #-------------------------------------------------
-            
-            if mdType == Model.Torch_depthAnythingV2_Rel: 
-                bgr = mdManager.adaptShapeForInference(bgr, makeSquareInput, borderType, dim=518)
-                relDisparity, _ = mdManager.infer(bgr)
-                bgr, relDisparity, gt = mdManager.alignShapes(bgr, relDisparity, gt)
-                metricDepth = mdManager.alignInDisparitySpace(relDisparity, gt, staticMask, k_hi)
+        #------------- static mask
+        #-------------------------------------------------
+        
+        maxVal = 50.0 if dtset == Dataset.KITTI else 15.0
+        staticMask, gt = getValidMaskAndClipExtremes(gt, minVal=0.01, maxVal=maxVal) 
+        
+        #------------- metric depth inference
+        #-------------------------------------------------
+        
+        if mdType == Model.Torch_depthAnythingV2_Rel: 
+            bgr = mdManager.adaptShapeForInference(bgr, makeSquareInput, borderType, dim=518)
+            relDisparity, _ = mdManager.infer(bgr)
+            bgr, relDisparity, gt = mdManager.alignShapes(bgr, relDisparity, gt)
+            metricDepth = mdManager.alignInDisparitySpace(relDisparity, gt, staticMask, k_hi)
 
-            elif mdType == Model.Torch_depthAnythingV2_Metric:
-                bgr = mdManager.adaptShapeForInference(bgr, makeSquareInput, borderType)
-                metricDepth, _ = mdManager.infer(bgr)
-                bgr, metricDepth, gt = mdManager.alignShapes(bgr, metricDepth, gt)
+        elif mdType == Model.Torch_depthAnythingV2_Metric:
+            bgr = mdManager.adaptShapeForInference(bgr, makeSquareInput, borderType)
+            metricDepth, _ = mdManager.infer(bgr)
+            bgr, metricDepth, gt = mdManager.alignShapes(bgr, metricDepth, gt)
 
-            elif mdType == Model.Torch_UNIDEPTH_V2:
-                gtIntrinsics = dtManager.getIntrinsics() if useIntrinsics else None
-                metricDepth, intrinsics = mdManager.infer(bgr, gtIntrinsics)
-                bgr, metricDepth, gt = mdManager.alignShapes(bgr, metricDepth, gt)     
-                if dtset != Dataset.KITTI:
-                    analyzer.printIntrinsComparison(intrinsics, gtIntrinsics) 
+        elif mdType == Model.Torch_UNIDEPTH_V2:
+            gtIntrinsics = dtManager.getIntrinsics() if useIntrinsics else None
+            metricDepth, intrinsics = mdManager.infer(bgr, gtIntrinsics)
+            bgr, metricDepth, gt = mdManager.alignShapes(bgr, metricDepth, gt)     
+            if dtset != Dataset.KITTI:
+                analyzer.printIntrinsComparison(intrinsics, gtIntrinsics) 
 
-            else:
-                raise ValueError("Unsupported model type")
+        else:
+            raise ValueError("Unsupported model type")
 
-            #------------- metric depth alignment
-            #-------------------------------------------------
-            
-            if alignDepth:
-                metricDepth = mdManager.alignInDepthSpace(metricDepth, gt, staticMask, alignmentType, k_hi, alignShift, maxVal)
-            
-            #------------- error analysis
-            #-------------------------------------------------
+        #------------- metric depth alignment
+        #-------------------------------------------------
+        
+        if alignDepth:
+            metricDepth = mdManager.alignInDepthSpace(metricDepth, gt, staticMask, alignmentType, k_hi, alignShift, maxVal)
+        
+        #------------- error analysis
+        #-------------------------------------------------
 
-            errImage = analyzer.runAnalysis(metricDepth, gt, staticMask, idx)
-            analyzer.sampleProcessed()
+        errImage = analyzer.runAnalysis(metricDepth, gt, staticMask, idx)
+        analyzer.sampleProcessed()
 
-            if showVisuals:
-                if showPerImageCDE:
-                    perImageCDE = analyzer.generateCDEgraph(analyzer.imgValidPixsErrs)
-                    visualizer.displayImage("Per Image CDE", perImageCDE, waitTime=1)
-                sc = 2.5 if dtset == Dataset.IPHONE else 0.7 
-                visualizer.showResults(bgr, metricDepth, gt, errImage, sc, vertConcat=(dtset == Dataset.KITTI))
+        if showVisuals:
+            if showPerImageCDE:
+                perImageCDE = analyzer.generateCDEgraph(analyzer.imgValidPixsErrs)
+                visualizer.displayImage("Per Image CDE", perImageCDE, waitTime=1)
+            sc = 2.5 if dtset == Dataset.IPHONE else 0.7 
+            visualizer.showResults(bgr, metricDepth, gt, errImage, sc, vertConcat=(dtset == Dataset.KITTI))
 
-            #--------------------- end of inference loop
-            #----------------------------------------------------------------------
+    #--------------------- end of inference loop
+    #----------------------------------------------------------------------
 
-        os.makedirs(folderPath, exist_ok=True)
-        writeVecOnDisk(folderPath + f"/{experimentID}.npy", analyzer.getDatasetErrors())    # save results to disk
+    os.makedirs(folderPath, exist_ok=True)
+    writeVecOnDisk(folderPath + f"/{experimentID}.npy", analyzer.getDatasetErrors())    # save results to disk
     
     #---------- update evaluation graphs
     #------------------------------------------------------------------
