@@ -164,7 +164,7 @@ class Analyzer:
         # Use common bin edges across series (consistent with xlim=[0, 1.0])
         # Large arrays take the fast histogram path; small arrays keep the exact sort.
         bins = 4096
-        x_min, x_max = 0.0, 1.0
+        x_min, x_max = 0.0, 0.72
         edges = np.linspace(x_min, x_max, bins + 1, dtype=np.float32)
 
         for label, arr in errDict.items():
@@ -191,8 +191,8 @@ class Analyzer:
             plotted_any = True
 
         ax.set_ylim(0, 100)
-        ax.set_xlim(0, 1.0)
-        ax.xaxis.set_major_locator(MaxNLocator(nbins=30))
+        ax.set_xlim(0, x_max)
+        ax.xaxis.set_major_locator(MaxNLocator(nbins=25))
 
         ax.set_title("Cumulative Error Distribution")
         ax.set_xlabel("Error")
