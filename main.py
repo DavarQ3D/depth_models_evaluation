@@ -6,6 +6,7 @@ from custom_assets.visualizer import Visualizer
 from custom_assets.utils import *
 from custom_assets.models import Model, ModelManager, AlignmentType
 from custom_assets.analyzer import Analyzer, ErrorType
+from config import parser
 
 #=============================================================================================================
 
@@ -13,17 +14,18 @@ if __name__ == '__main__':
 
     outdir = "./data/outputs"
     os.makedirs(outdir, exist_ok=True)
+    args = parser.parse_args()
 
     #--------------------- settings
-    
-    dtset = Dataset.IPHONE
-    
-    mdType = Model.Torch_UNIDEPTH_V2
+
+    dtset = Dataset[args.dataset]
+
+    mdType = Model[args.model]
     encoder = "vits"
 
-    alignDepth = True                                 # alignment is highly encouraged even on the best metric depth models
-    alignmentType = AlignmentType.Fitting   
-    alignShift = True                                 # scale is always applied if alignDepth is True, shift is optional
+    alignDepth = args.align                                 # alignment is highly encouraged even on the best metric depth models
+    alignmentType = AlignmentType[args.alignType]    
+    alignShift = args.alignShift                            # scale is always applied if alignDepth is True, shift is optional
     k_hi = 2.5 if dtset == Dataset.IPHONE else 3.0
 
     makeSquareInput = True and (mdType == Model.Torch_depthAnythingV2_Rel or mdType == Model.Torch_depthAnythingV2_Metric)
@@ -156,7 +158,7 @@ if __name__ == '__main__':
     errDict = analyzer.loadErrorVecsFromFolderParallel(folderPath)
     combinedCDE = analyzer.generateCombingedCDEgraph(errDict)
     cv2.imwrite(folderPath + f"/{dtset.name}_data.png", combinedCDE)
-    visualizer.displayImage(f"{dtset.name}_data", combinedCDE, waitTime=0)
+    # visualizer.displayImage(f"{dtset.name}_data", combinedCDE, waitTime=0)
 
         
 
