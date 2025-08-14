@@ -6,6 +6,7 @@ import os
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.ticker import MaxNLocator
+from concurrent.futures import ThreadPoolExecutor
 
 class ErrorType(Enum):
     ABS_REL = 1
@@ -131,6 +132,27 @@ class Analyzer:
 
     #======================================================================= 
 
+    def loadErrorVecsFromFolderParallel(self, folderPath):
+        # Accept both .npy (preferred) and .txt (legacy)
+        exts = (".npy", ".npz", ".txt")
+        files = [f for f in os.listdir(folderPath) if f.lower().endswith(exts)]
+        if not files:
+            return {}
+
+        def _load(name):
+            path = os.path.join(folderPath, name)
+            vec = loadVecFromFile(path)
+            key = os.path.splitext(name)[0]
+            return key, np.asarray(vec, dtype=np.float32)
+
+        # Threaded = good for I/O; numpy loads release the GIL during I/O
+        with ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as pool:
+            items = list(pool.map(_load, sorted(files)))  # sorted for stable legend order
+
+        return dict(items)
+
+    #======================================================================= 
+
     def generateCombingedCDEgraph(self, errDict):
 
         fig = Figure(figsize=(13, 9), dpi=100)
@@ -138,14 +160,34 @@ class Analyzer:
         ax = fig.add_subplot()
 
         plotted_any = False
+
+        # Use common bin edges across series (consistent with xlim=[0, 1.0])
+        # Large arrays take the fast histogram path; small arrays keep the exact sort.
+        bins = 4096
+        x_min, x_max = 0.0, 1.0
+        edges = np.linspace(x_min, x_max, bins + 1, dtype=np.float32)
+
         for label, arr in errDict.items():
             arr = np.asarray(arr, dtype=np.float32)
             if arr.size == 0:
                 continue
-            arr.sort()
-            n = arr.size
-            Ps = (np.arange(1, n + 1, dtype=np.float32) * 100.0) / n
-            ax.plot(arr, Ps, linestyle='-', label=str(label))
+
+            # ---------- FAST PATH: histogram-based CDF (no O(N log N) sort) ----------
+            if arr.size > 200_000:
+                # keep consistency with axis limits; values outside [0,1] would be clipped visually anyway
+                arr = np.clip(arr, x_min, x_max)
+                h, _ = np.histogram(arr, bins=edges)
+                Ps = (np.cumsum(h, dtype=np.int64) * 100.0) / arr.size
+                xs = edges[1:]
+                ax.plot(xs, Ps, linestyle='-', label=str(label))
+
+            # ---------- EXACT PATH: original behavior for smaller arrays ----------
+            else:
+                arr = np.sort(arr, kind='quicksort')  # returns a writable sorted copy
+                n = arr.size
+                Ps = (np.arange(1, n + 1, dtype=np.float32) * 100.0) / n
+                ax.plot(arr, Ps, linestyle='-', label=str(label))
+
             plotted_any = True
 
         ax.set_ylim(0, 100)

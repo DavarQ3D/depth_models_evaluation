@@ -18,7 +18,7 @@ if __name__ == '__main__':
     
     dtset = Dataset.IPHONE
     
-    mdType = Model.Torch_depthAnythingV2_Rel
+    mdType = Model.Torch_UNIDEPTH_V2
     encoder = "vits"
 
     alignDepth = True                                 # alignment is highly encouraged even on the best metric depth models
@@ -32,12 +32,12 @@ if __name__ == '__main__':
     useIntrinsics = True and (dtset != Dataset.KITTI)
 
     errType = ErrorType.ABS_REL
-    maxNumSamplesToAnalyze = 60
-    showVisuals = False
+    maxNumSamplesToAnalyze = 100
+    showVisuals = True
     showPerImageCDE = True and (errType == ErrorType.ABS_REL)
 
     runExperiment = True
-    alignmentID = f"alignmentType[{alignmentType.name}]_alignShift[{alignShift}]" if alignDepth else "noAlignmentInDepthSpace"
+    alignmentID = f"aligType[{alignmentType.name}]_alignShift[{alignShift}]" if alignDepth else "noAlignmentInDepthSpace"
     experimentID = f"{mdType.name}_{alignmentID}"
     experimentFolder = dtset.name
     folderPath = os.path.join(outdir, experimentFolder)
@@ -151,11 +151,11 @@ if __name__ == '__main__':
             #----------------------------------------------------------------------
 
         os.makedirs(folderPath, exist_ok=True)
-        writeVecOnDisk(folderPath + f"/{experimentID}.txt", analyzer.getDatasetErrors())     # save results to disk
+        writeVecOnDisk(folderPath + f"/{experimentID}.npy", analyzer.getDatasetErrors())    # save results to disk
     
     #---------- update evaluation graphs
     #------------------------------------------------------------------
-    errDict = analyzer.loadErrorVecsFromFolder(folderPath)
+    errDict = analyzer.loadErrorVecsFromFolderParallel(folderPath)
     combinedCDE = analyzer.generateCombingedCDEgraph(errDict)
     cv2.imwrite(folderPath + f"/{dtset.name}_data.png", combinedCDE)
     visualizer.displayImage(f"{dtset.name}_data", combinedCDE, waitTime=0)

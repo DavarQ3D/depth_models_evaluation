@@ -268,17 +268,33 @@ def makeMultiChannelImage(depth):
  
 def writeVecOnDisk(path, input):
     path = Path(path)
-    with open(path, 'w') as f:
-        for value in input:
-            f.write(f"{value:.6f}\n")
-    print(f"\nVector written to {path}")
+    arr = np.asarray(input, dtype=np.float32)
+    path.parent.mkdir(parents=True, exist_ok=True)
 
+    # If saving as .npy, use fast binary. Otherwise, keep text for backward-compat.
+    if path.suffix.lower() == ".npy":
+        np.save(path, arr)  # binary, very fast
+    else:
+        # Faster than manual Python loop over lines
+        np.savetxt(path, arr, fmt="%.6f")
+
+    print(f"\nvector written to {path}")
+    
 #=============================================================================================================
 
 def loadVecFromFile(path):
     path = Path(path)
     if not path.exists():
         raise FileNotFoundError(f"File not found: {path}")
-    with open(path, 'r') as f:
-        vec = [float(line.strip()) for line in f]
-    return np.array(vec, dtype=np.float32)
+
+    suf = path.suffix.lower()
+    if suf == ".npy":
+        # memory-map to avoid copying huge arrays into RAM at once
+        return np.load(path, mmap_mode="r").astype(np.float32, copy=False)
+    elif suf == ".npz":
+        z = np.load(path, mmap_mode="r")
+        # expect 'data' key if you choose to use savez; adjust if different
+        return z["data"].astype(np.float32, copy=False)
+    else:
+        # Text fallback (slower than .npy). Still much faster than manual loop.
+        return np.loadtxt(path, dtype=np.float32)
