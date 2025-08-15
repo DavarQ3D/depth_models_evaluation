@@ -38,7 +38,7 @@ if __name__ == '__main__':
     showVisuals = False
     showPerImageCDE = True and (errType == ErrorType.ABS_REL)
 
-    alignmentID = f"aligType[{alignmentType.name}]_alignShift[{alignShift}]" if alignDepth else "noAlignmentInDepthSpace"
+    alignmentID = f"alignType[{alignmentType.name}]_alignShift[{alignShift}]" if alignDepth else "noAlignmentInDepthSpace"
     experimentID = f"{mdType.name}_{alignmentID}"
     experimentFolder = f"{mdType.name}_{dtset.name}"
     folderPath = os.path.join(outdir, experimentFolder)
