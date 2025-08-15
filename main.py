@@ -110,18 +110,18 @@ if __name__ == '__main__':
         if mdType == Model.Torch_depthAnythingV2_Rel: 
             bgr = mdManager.adaptShapeForInference(bgr, makeSquareInput, borderType, dim=518)
             relDisparity, _ = mdManager.infer(bgr)
-            bgr, relDisparity, gt = mdManager.alignShapes(bgr, relDisparity, gt)
+            bgr, relDisparity, gt, staticMask = mdManager.alignShapes(bgr, relDisparity, gt, staticMask)
             metricDepth = mdManager.alignInDisparitySpace(relDisparity, gt, staticMask, k_hi)
 
         elif mdType == Model.Torch_depthAnythingV2_Metric:
             bgr = mdManager.adaptShapeForInference(bgr, makeSquareInput, borderType)
             metricDepth, _ = mdManager.infer(bgr)
-            bgr, metricDepth, gt = mdManager.alignShapes(bgr, metricDepth, gt)
+            bgr, metricDepth, gt, staticMask = mdManager.alignShapes(bgr, metricDepth, gt, staticMask)
 
         elif mdType == Model.Torch_UNIDEPTH_V2:
             gtIntrinsics = dtManager.getIntrinsics() if useIntrinsics else None
             metricDepth, intrinsics = mdManager.infer(bgr, gtIntrinsics)
-            bgr, metricDepth, gt = mdManager.alignShapes(bgr, metricDepth, gt)     
+            bgr, metricDepth, gt, staticMask = mdManager.alignShapes(bgr, metricDepth, gt, staticMask)     
             if dtset != Dataset.KITTI:
                 analyzer.printIntrinsComparison(intrinsics, gtIntrinsics) 
 

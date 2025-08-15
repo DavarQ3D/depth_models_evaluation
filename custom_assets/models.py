@@ -135,7 +135,7 @@ class ModelManager:
             
     #=======================================================================  
 
-    def alignShapes(self, image, pred, gt):
+    def alignShapes(self, image, pred, gt, gtMask):
 
         if self.mdType == Model.Torch_depthAnythingV2_Rel or self.mdType == Model.Torch_depthAnythingV2_Metric:
 
@@ -153,12 +153,13 @@ class ModelManager:
                 horizMarg = (crop_left * 2) / (resizedShape[1] / gt.shape[1])
                 vertMarg = round(vertMarg / 2)                                # round to the nearest even number
                 horizMarg = round(horizMarg / 2)
-                gt = gt[vertMarg or None : (-vertMarg) or None, horizMarg or None : (-horizMarg) or None]    
+                gt = gt[vertMarg or None : (-vertMarg) or None, horizMarg or None : (-horizMarg) or None]
+                gtMask = gtMask[vertMarg or None : (-vertMarg) or None, horizMarg or None : (-horizMarg) or None]    
         
         pred  = cv2.resize(pred,  (gt.shape[1], gt.shape[0]), interpolation=cv2.INTER_CUBIC)
         image = cv2.resize(image, (gt.shape[1], gt.shape[0]), interpolation=cv2.INTER_CUBIC)
 
-        return image, pred, gt
+        return image, pred, gt, gtMask
           
     #=======================================================================        
 
